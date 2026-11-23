@@ -1,0 +1,12 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: touchscreen-tablet-toggle
+
+Files: *
+Copyright: 2026 Touchscreen Tablet Toggle contributors
+License: GPL-3+
+ This software is distributed under the GNU General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+ .
+ On Debian systems the full text of GPL version 3 is available in
+ /usr/share/common-licenses/GPL-3.

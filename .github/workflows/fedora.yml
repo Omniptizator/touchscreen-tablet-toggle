@@ -1,0 +1,39 @@
+name: Fedora package
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build source and binary RPMs and run tests
+        run: |
+          dnf -y install rpm-build systemd-rpm-macros python3-gobject-base python3-libevdev python3-pyudev gjs dbus-daemon glib2 tar gzip
+          bash packaging/fedora/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedora-45-package
+          path: dist/fedora/
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: fedora-45-package
+          path: dist/fedora/
+      - name: Exercise installed package and GNOME 51 Quick Setting
+        run: |
+          cd dist/fedora && sha256sum -c SHA256SUMS && cd ../..
+          dnf -y install ./dist/fedora/*.noarch.rpm python3-dbusmock dbus-daemon mesa-dri-drivers diffutils
+          systemd-analyze verify touchscreen-tablet-toggle.service
+          for f in service/*.py; do cmp "$f" "/usr/lib/touchscreen-tablet-toggle/${f##*/}"; done
+          for f in extension/*.js; do cmp "$f" "/usr/share/gnome-shell/extensions/tablet-only-touchscreen@touchscreen-tablet-toggle/${f##*/}"; done
+          gnome-shell --version | grep 'Shell 51'
+          dbus-run-session -- bash packaging/fedora/tests/shell.sh
+          dnf -y remove touchscreen-tablet-toggle
+          test ! -e /usr/lib/systemd/system/touchscreen-tablet-toggle.service

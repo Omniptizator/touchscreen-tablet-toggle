@@ -1,0 +1,11 @@
+touchscreen-tablet-toggle (0.1.1) resolute; urgency=medium
+
+  * Add Fedora packaging and GNOME 51 extension metadata.
+
+ -- Touchscreen Tablet Toggle contributors <maintainers@touchscreen-tablet-toggle.invalid>  Sun, 22 Nov 2026 13:00:00 +0000
+
+touchscreen-tablet-toggle (0.1.0) resolute; urgency=medium
+
+  * Initial local release candidate for GNOME 50.
+
+ -- Touchscreen Tablet Toggle contributors <maintainers@touchscreen-tablet-toggle.invalid>  Sun, 22 Nov 2026 12:00:00 +0000

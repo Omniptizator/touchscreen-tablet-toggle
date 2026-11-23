@@ -1,0 +1,7 @@
+{
+  "uuid": "tablet-only-touchscreen@touchscreen-tablet-toggle",
+  "name": "Tablet-only Touchscreen",
+  "description": "Use finger touch only in tablet mode, using the Touchscreen Tablet Toggle system service.",
+  "shell-version": ["50", "51"],
+  "version": 2
+}

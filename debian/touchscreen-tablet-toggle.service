@@ -1,0 +1,26 @@
+[Unit]
+Description=Tablet-only touchscreen input policy
+After=dbus.service systemd-udev-trigger.service
+
+[Service]
+Type=dbus
+BusName=io.github.TouchscreenTabletToggle
+ExecStart=/usr/bin/python3 -B /usr/lib/touchscreen-tablet-toggle/toggle.py
+Restart=on-failure
+StateDirectory=touchscreen-tablet-toggle
+StateDirectoryMode=0700
+SupplementaryGroups=input
+CapabilityBoundingSet=
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+PrivateTmp=true
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+DevicePolicy=closed
+DeviceAllow=char-input r
+
+[Install]
+WantedBy=multi-user.target
