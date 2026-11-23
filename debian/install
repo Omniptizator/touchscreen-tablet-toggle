@@ -1,4 +1,4 @@
-service/*.py usr/lib/touchscreen-tablet-toggle/
+build/touchscreen-tablet-toggle usr/libexec/
 extension/* usr/share/gnome-shell/extensions/tablet-only-touchscreen@touchscreen-tablet-toggle/
 data/*.conf usr/share/dbus-1/system.d/
 data/*.policy usr/share/polkit-1/actions/

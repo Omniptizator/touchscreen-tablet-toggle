@@ -4,5 +4,5 @@
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
-	PYTHONDONTWRITEBYTECODE=1 dbus-run-session -- /usr/bin/python3 -m unittest discover -s tests -v
+	$(MAKE) check
 endif

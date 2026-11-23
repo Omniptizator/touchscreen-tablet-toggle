@@ -1,0 +1,17 @@
+#!/bin/sh
+# Read-only, on the host following a real service upgrade.
+set -eu
+name=touchscreen-tablet-toggle
+bus=io.github.TouchscreenTabletToggle
+pid=$(systemctl show -p MainPID --value "$name")
+test "$pid" -gt 0
+test "$(readlink "/proc/$pid/exe")" = "/usr/libexec/$name"
+owner=$(gdbus call --system -d org.freedesktop.DBus -o /org/freedesktop/DBus \
+    -m org.freedesktop.DBus.GetConnectionUnixProcessID "$bus")
+test "$owner" = "(uint32 $pid,)"
+if [ -d "/usr/lib/$name" ]; then
+    test -z "$(find "/usr/lib/$name" -type f -print -quit)"
+fi
+gdbus call --system -d "$bus" -o /io/github/TouchscreenTabletToggle \
+    -m org.freedesktop.DBus.Properties.GetAll "$bus"
+echo "Native systemd service and D-Bus owner: PID $pid"

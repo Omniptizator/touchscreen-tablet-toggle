@@ -1,15 +1,13 @@
 Name:           touchscreen-tablet-toggle
-Version:        0.1.1
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        GNOME Quick Setting for tablet-only finger touch
 License:        GPL-3.0-or-later
 Source0:        %{name}-%{version}.tar.gz
-BuildArch:      noarch
 
 BuildRequires:  systemd-rpm-macros
-BuildRequires:  python3-gobject-base python3-libevdev python3-pyudev
+BuildRequires:  gcc make pkgconfig(gio-unix-2.0) pkgconfig(libevdev) pkgconfig(libudev)
 BuildRequires:  gjs dbus-daemon glib2
-Requires:       python3-gobject-base python3-libevdev python3-pyudev
 Requires:       polkit systemd
 Requires:       gnome-shell >= 51
 Requires:       gnome-shell < 52
@@ -24,11 +22,11 @@ Shell extension; the separate pen and touchpad remain independent.
 %setup -q
 
 %build
-# Interpreted Python and GJS.
+%set_build_flags
+%make_build
 
 %install
-install -d %{buildroot}%{_prefix}/lib/%{name}
-install -pm644 service/*.py %{buildroot}%{_prefix}/lib/%{name}/
+install -Dpm755 build/%{name} %{buildroot}%{_libexecdir}/%{name}
 ext=%{buildroot}%{_datadir}/gnome-shell/extensions/tablet-only-touchscreen@%{name}
 install -d "$ext"
 install -pm644 extension/* "$ext/"
@@ -37,8 +35,7 @@ install -Dpm644 data/*.conf -t %{buildroot}%{_datadir}/dbus-1/system.d
 install -Dpm644 data/*.policy -t %{buildroot}%{_datadir}/polkit-1/actions
 
 %check
-GIO_USE_VFS=local PYTHONDONTWRITEBYTECODE=1 dbus-run-session -- \
-    /usr/bin/python3 -m unittest discover -s tests -v
+make check
 
 %post
 %systemd_post %{name}.service
@@ -52,7 +49,7 @@ GIO_USE_VFS=local PYTHONDONTWRITEBYTECODE=1 dbus-run-session -- \
 %files
 %license LICENSE
 %doc README.md
-%{_prefix}/lib/%{name}/
+%{_libexecdir}/%{name}
 %{_unitdir}/%{name}.service
 %{_datadir}/gnome-shell/extensions/tablet-only-touchscreen@%{name}/
 %{_datadir}/dbus-1/system.d/io.github.TouchscreenTabletToggle.conf

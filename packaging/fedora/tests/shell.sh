@@ -13,11 +13,12 @@ probe=probe@test.invalid
 ext=$HOME/.local/share/gnome-shell/extensions/$probe
 mkdir -p "$ext"
 cp packaging/fedora/tests/probe.js "$ext/extension.js"
-echo "{\"uuid\":\"$probe\",\"name\":\"CI probe\",\"description\":\"UI smoke test\",\"shell-version\":[\"51\"]}" > "$ext/metadata.json"
+echo "{\"uuid\":\"$probe\",\"name\":\"CI probe\",\"description\":\"UI smoke test\",\"shell-version\":[\"50\",\"51\"]}" > "$ext/metadata.json"
 touch "$TTT_FIXTURE/allowed"
-python3 tests/mock_service.py "$TTT_FIXTURE" &
+STATE_DIRECTORY=$TTT_FIXTURE build/mock &
 export TTT_MOCK_PID=$!
-python3 -m dbusmock --session -t logind -l "$HOME/logind.log" &
+authority=$PWD/build/authority
+(cd "$TTT_FIXTURE" && exec "$authority") &
 loginpid=$!
 cleanup() {
     [ -f "$TTT_FIXTURE/passed" ] || cat "$HOME/shell.log" >&2
@@ -39,6 +40,15 @@ for ((i=0; i<150; i++)); do
 done
 test -f "$TTT_FIXTURE/passed"
 test "$(cat "$TTT_FIXTURE/enabled")" = 0
+# The extensions helper can be D-Bus activated outside the compositor.
+# Give it the headless compositor's socket, not the host desktop's display.
+for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
+    if [[ -S $socket ]]; then
+        export WAYLAND_DISPLAY=${socket##*/}
+        dbus-update-activation-environment HOME XDG_RUNTIME_DIR WAYLAND_DISPLAY GSETTINGS_BACKEND
+        break
+    fi
+done
 gnome-extensions disable "$uuid"
 gnome-extensions enable "$uuid"
 gnome-extensions info "$uuid" | grep 'State: ACTIVE'

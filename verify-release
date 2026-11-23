@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Run inside a disposable target distro container (no host input devices).
+set -euo pipefail
+if [[ $# != 1 || ( $1 != ubuntu && $1 != fedora ) ]]; then
+    echo "usage: $0 ubuntu|fedora (inside a disposable container)" >&2
+    exit 2
+fi
+if [[ ! -e /run/.containerenv && ! -e /.dockerenv ]]; then
+    echo "Run in a disposable packaging container; this test installs and removes the package." >&2
+    exit 2
+fi
+root=$PWD
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+mkdir "$tmp/src"
+tar --exclude=.git --exclude=dist --exclude=build --exclude='*.py' --exclude=__pycache__ -cf - . | tar -C "$tmp/src" -xf -
+cd "$tmp/src"
+pkg=touchscreen-tablet-toggle
+bin=/usr/libexec/$pkg
+out=$root/dist/native/$1
+mkdir -p "$out"
+case $1 in
+ubuntu)
+    dpkg-buildpackage -us -uc
+    cp ../*.{deb,dsc,tar.xz,changes,buildinfo} "$out/"
+    file=$(realpath ../*.deb)
+    old=("$root"/dist/ubuntu/*_all.deb)
+    if [[ -f ${old[0]} ]]; then apt-get install -y "${old[0]}"; fi
+    inspect=$(dpkg-deb -c "$file"; dpkg-deb -f "$file" Depends)
+    ;;
+fedora)
+    bash packaging/fedora/build.sh
+    cp dist/native/fedora/* "$out/"
+    file=$(realpath "$out"/*."$(uname -m)".rpm)
+    old=("$root"/dist/fedora/*.noarch.rpm)
+    if [[ -f ${old[0]} ]]; then dnf install -y "${old[0]}"; fi
+    inspect=$(rpm -qpl "$file"; rpm -qpR "$file")
+    ;;
+*) exit 2;;
+esac
+if grep -Ei 'python|\.py[co]?$' <<<"$inspect"; then exit 1; fi
+install -d -m700 "/var/lib/$pkg"
+echo 1 > "/var/lib/$pkg/enabled"
+case $1 in
+ubuntu) apt-get install -y "$file";;
+fedora) dnf install -y "$file";;
+esac
+test ! -e "/usr/lib/$pkg/toggle.py"
+test ! -e "/usr/lib/$pkg/hardware.py"
+if [[ -d /usr/lib/$pkg ]]; then
+    test -z "$(find "/usr/lib/$pkg" -type f -print -quit)"
+fi
+test "$(cat "/var/lib/$pkg/enabled")" = 1
+systemd-analyze verify "$pkg.service"
+"$bin" --discover
+dbus-run-session -- bash -ec '
+export DBUS_SYSTEM_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS STATE_DIRECTORY=/var/lib/touchscreen-tablet-toggle
+/usr/libexec/touchscreen-tablet-toggle & pid=$!
+trap "kill $pid; wait $pid" EXIT
+n=io.github.TouchscreenTabletToggle
+gdbus wait --session -t 5 "$n"
+test "$(readlink /proc/$pid/exe)" = /usr/libexec/touchscreen-tablet-toggle
+owner=$(gdbus call --session -d org.freedesktop.DBus -o /org/freedesktop/DBus \
+    -m org.freedesktop.DBus.GetConnectionUnixProcessID "$n")
+test "$owner" = "(uint32 $pid,)"
+gdbus call --session -d "$n" -o /io/github/TouchscreenTabletToggle -m org.freedesktop.DBus.Properties.Get "$n" Enabled | grep true'
+make fixtures
+dbus-run-session -- bash packaging/fedora/tests/shell.sh
+case $1 in
+ubuntu) dpkg -r "$pkg";;
+fedora) rpm -e "$pkg";;
+esac
+test ! -e "$bin"
+(cd "$out"; sha256sum "$(basename "$file")" > binary.sha256)

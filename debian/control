@@ -1,14 +1,15 @@
 Source: touchscreen-tablet-toggle
 Section: gnome
 Priority: optional
-Maintainer: Touchscreen Tablet Toggle contributors <maintainers@touchscreen-tablet-toggle.invalid>
-Build-Depends: debhelper-compat (= 13), python3, python3-gi, python3-libevdev, python3-pyudev, dbus-daemon, libglib2.0-bin
+Maintainer: Omniptizator <Omniptizator@users.noreply.github.com>
+Homepage: https://github.com/Omniptizator/touchscreen-tablet-toggle
+Build-Depends: debhelper-compat (= 13), pkgconf, libglib2.0-dev, libevdev-dev, libudev-dev, dbus-daemon, libglib2.0-bin, gjs
 Standards-Version: 4.7.2
 Rules-Requires-Root: no
 
 Package: touchscreen-tablet-toggle
-Architecture: all
-Depends: ${misc:Depends}, python3, python3-gi, gir1.2-glib-2.0, python3-libevdev, python3-pyudev, polkitd, systemd, gnome-shell (>= 50~), gnome-shell (<< 51~)
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, polkitd, systemd, gnome-shell (>= 50~), gnome-shell (<< 51~)
 Description: GNOME Quick Setting for tablet-only finger touch
  Automatically block an internal finger touchscreen in laptop mode using
  an Intel Virtual Switches posture sensor. Pen and touchpad input remain

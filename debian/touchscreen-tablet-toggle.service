@@ -5,7 +5,7 @@ After=dbus.service systemd-udev-trigger.service
 [Service]
 Type=dbus
 BusName=io.github.TouchscreenTabletToggle
-ExecStart=/usr/bin/python3 -B /usr/lib/touchscreen-tablet-toggle/toggle.py
+ExecStart=/usr/libexec/touchscreen-tablet-toggle
 Restart=on-failure
 StateDirectory=touchscreen-tablet-toggle
 StateDirectoryMode=0700

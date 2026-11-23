@@ -1,5 +1,44 @@
 # Resource profile: Ubuntu on the HP Spectre
 
+## Native migration comparison (0.2.0, November 23)
+
+Sequential runs of the old and new production daemons on private buses:
+Ubuntu 26.04 on the Spectre as an unprivileged user, Fedora 45 in rootless
+Podman. Neither benchmark daemon could read input devices. One C client made
+1,000 alternating, authorized `SetEnabled` calls, including persistence. CPU
+is for the daemon only (100 ticks/s); elapsed time also includes the bus,
+client and separate C authorization fixture. Idle measurements are immediately
+before this workload, after five minutes with the policy off.
+
+| System | Daemon | Idle PSS / private (KiB) | Idle CPU ticks / context switches gained | 1,000 calls: elapsed / daemon CPU | Active context switches gained |
+|---|---|---:|---:|---:|---:|
+| Ubuntu | Python | 18,749 / 16,348 | 0 / 0 | 3.82 s / 2.73 s | 6,475 |
+| Ubuntu | C | 775 / 680 | 0 / 0 | 1.96 s / 0.88 s | 7,674 |
+| Fedora | Python | 31,028 / 28,760 | 0 / 0 | 2.28 s / 1.68 s | 6,939 |
+| Fedora | C | 3,164 / 1,028 | 0 / 0 | 1.99 s / 0.97 s | 7,911 |
+
+Idle PSS fell by **96% on Ubuntu** and **90% on Fedora**. PSS includes a
+proportional share of library pages; compare within each environment rather
+than interpreting differences between host and container as OS overhead.
+After 1,000 calls the native private memory readings were 688 KiB on Ubuntu
+and 1,032 KiB on Fedora. Active context switches increased despite lower CPU
+time. The timings are individual runs, not physical hinge-to-input latency.
+
+The separate C input fixture drove the real policy and GLib FD watch. On both
+systems, 30 unrelated rescans and 1,000 duplicate switch reports caused zero
+releases/regrabs. For 100 alternating posture reports the fixture measured
+0.87 ms total on Ubuntu and 1.51 ms on Fedora, with 50 releases and 50 grabs.
+These exclude sysfs enumeration, kernel grab latency and Shell rendering.
+The private-bus test also verifies one change notification across ten calls
+that transition the policy only once. The Ubuntu sanitizer build passed the
+policy, transition, persistence/error and private-bus tests.
+
+Reproduce with `make check` and `make bench`; `BENCH_DAEMON` may name an
+absolute executable wrapper for an archived backend. The original installed
+Ubuntu service measurement below is cgroup usage, **not** comparable to PSS.
+
+## Original Python baseline
+
 Measured 2026-11-23 on the installed `touchscreen-tablet-toggle` 0.1.0.
 The installed service Python files matched the working tree. The live policy
 was enabled, the Intel switch was in laptop posture, and finger touch was

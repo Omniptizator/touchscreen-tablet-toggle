@@ -1,0 +1,5 @@
+tar-ignore
+tar-ignore = dist
+tar-ignore = build
+tar-ignore = *.py
+tar-ignore = __pycache__
