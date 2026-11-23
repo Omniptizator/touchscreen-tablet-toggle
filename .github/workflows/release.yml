@@ -1,0 +1,47 @@
+name: Publish tagged packages
+on:
+  workflow_run:
+    workflows: [Native packages]
+    types: [completed]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency: publish-${{ github.event.workflow_run.head_sha }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - id: version
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          # A branch and tag pushed together can produce one build. Match
+          # the revision that passed, independent of the triggering ref.
+          tag=$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git" |
+            awk -v sha="$TESTED_SHA" '$1 == sha && $2 ~ /^refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+(\^\{\})?$/ {
+              sub(/^refs\/tags\//,"",$2); sub(/\^\{\}$/,"",$2); print $2; exit
+            }')
+          if [[ -n $tag ]] && ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.version.outputs.tag != ''
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: packages
+      - if: steps.version.outputs.tag != ''
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          mkdir release
+          find packages -type f \( -name '*.rpm' -o -name '*.deb' \) -exec cp -t release {} +
+          cd release
+          sha256sum *.deb *.rpm > SHA256SUMS
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Tablet-only Touchscreen $TAG" \
+            --notes "GNOME Quick Setting for convertible laptops. Install the .deb on Ubuntu 26.04 or the x86_64 RPM on Fedora Workstation 45." \
+            *.deb *.rpm SHA256SUMS

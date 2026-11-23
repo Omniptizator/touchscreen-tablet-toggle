@@ -28,25 +28,3 @@ jobs:
         with:
           name: ${{ matrix.distro }}-native
           path: dist/native/
-  release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: verify
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: packages
-      - name: Publish verified packages
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir release
-          find packages -type f \( -name '*.rpm' -o -name '*.deb' \) -exec cp -t release {} +
-          cd release
-          sha256sum *.deb *.rpm > SHA256SUMS
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --title "Tablet-only Touchscreen $GITHUB_REF_NAME" \
-            --notes "Native service and GNOME Quick Setting for Ubuntu 26.04 and Fedora Workstation 45. Finger touch follows the laptop's tablet-mode switch." \
-            *.deb *.rpm SHA256SUMS
